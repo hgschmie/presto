@@ -31,12 +31,12 @@
         <snapshotRepository>
             <id>zuora-nexus-snapshots</id>
             <name>Zuora Nexus Snapshots</name>
-            <url>https://nexus.zias.io/nexus/content/repositories/snapshots/</url>
+            <url>http://1.util.inf.slv.zuora:8081/nexus/content/repositories/snapshots/</url>
         </snapshotRepository>
         <repository>
             <id>zuora-nexus-releases</id>
             <name>Zuora Nexus Releases</name>
-            <url>https://nexus.zias.io/nexus/content/repositories/releases/</url>
+            <url>http://1.util.inf.slv.zuora:8081/nexus/content/repositories/releases/</url>
         </repository>
     </distributionManagement>
 

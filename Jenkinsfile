@@ -35,14 +35,6 @@ pipeline {
             }
         }
 
-        stage('Analytics') {
-            steps {
-                script {
-                    projectHealth().reportOwlProjectHealth()
-                }
-            }
-        }
-
         stage('Master-Maven-Deploy') {
             when {
                 branch 'master'
