@@ -24,6 +24,7 @@ import io.prestosql.connector.ConnectorManager;
 import io.prestosql.eventlistener.EventListenerManager;
 import io.prestosql.execution.resourceGroups.ResourceGroupManager;
 import io.prestosql.metadata.Metadata;
+import io.prestosql.metadata.SessionPropertyManager;
 import io.prestosql.security.AccessControlManager;
 import io.prestosql.server.security.PasswordAuthenticatorManager;
 import io.prestosql.spi.Plugin;
@@ -34,6 +35,7 @@ import io.prestosql.spi.eventlistener.EventListenerFactory;
 import io.prestosql.spi.resourcegroups.ResourceGroupConfigurationManagerFactory;
 import io.prestosql.spi.security.PasswordAuthenticatorFactory;
 import io.prestosql.spi.security.SystemAccessControlFactory;
+import io.prestosql.spi.session.PropertyMetadata;
 import io.prestosql.spi.session.SessionPropertyConfigurationManagerFactory;
 import io.prestosql.spi.type.ParametricType;
 import io.prestosql.spi.type.Type;
@@ -82,6 +84,7 @@ public class PluginManager
     private final BlockEncodingManager blockEncodingManager;
     private final SessionPropertyDefaults sessionPropertyDefaults;
     private final TypeRegistry typeRegistry;
+    private final SessionPropertyManager sessionPropertyManager;
     private final ArtifactResolver resolver;
     private final File installedPluginsDir;
     private final List<String> plugins;
@@ -100,7 +103,8 @@ public class PluginManager
             EventListenerManager eventListenerManager,
             BlockEncodingManager blockEncodingManager,
             SessionPropertyDefaults sessionPropertyDefaults,
-            TypeRegistry typeRegistry)
+            TypeRegistry typeRegistry,
+            SessionPropertyManager sessionPropertyManager)
     {
         requireNonNull(nodeInfo, "nodeInfo is null");
         requireNonNull(config, "config is null");
@@ -123,6 +127,7 @@ public class PluginManager
         this.blockEncodingManager = requireNonNull(blockEncodingManager, "blockEncodingManager is null");
         this.sessionPropertyDefaults = requireNonNull(sessionPropertyDefaults, "sessionPropertyDefaults is null");
         this.typeRegistry = requireNonNull(typeRegistry, "typeRegistry is null");
+        this.sessionPropertyManager = requireNonNull(sessionPropertyManager, "sessionPropertyManager is null");
     }
 
     public void loadPlugins()
@@ -223,6 +228,11 @@ public class PluginManager
         for (EventListenerFactory eventListenerFactory : plugin.getEventListenerFactories()) {
             log.info("Registering event listener %s", eventListenerFactory.getName());
             eventListenerManager.addEventListenerFactory(eventListenerFactory);
+        }
+
+        for (PropertyMetadata<?> propertyMetadata : plugin.getPluginSessionProperties()) {
+            log.info("Registering plugin session property %s", propertyMetadata.getName());
+            sessionPropertyManager.addSystemSessionProperty(propertyMetadata);
         }
     }
 

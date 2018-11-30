@@ -26,6 +26,7 @@ import io.prestosql.connector.ConnectorId;
 import io.prestosql.cost.PlanNodeCostEstimate;
 import io.prestosql.cost.PlanNodeStatsEstimate;
 import io.prestosql.cost.StatsAndCosts;
+import io.prestosql.eventlistener.DefaultQueryContext;
 import io.prestosql.eventlistener.EventListenerManager;
 import io.prestosql.execution.Column;
 import io.prestosql.execution.ExecutionFailureInfo;
@@ -277,7 +278,7 @@ public class QueryMonitor
 
     private QueryContext createQueryContext(SessionRepresentation session, Optional<ResourceGroupId> resourceGroup)
     {
-        return new QueryContext(
+        return new DefaultQueryContext(
                 session.getUser(),
                 session.getPrincipal(),
                 session.getTraceToken(),
@@ -294,7 +295,8 @@ public class QueryMonitor
                 session.getResourceEstimates(),
                 serverAddress,
                 serverVersion,
-                environment);
+                environment,
+                sessionPropertyManager);
     }
 
     private Optional<String> createTextQueryPlan(QueryInfo queryInfo)
