@@ -27,10 +27,22 @@
         </license>
     </licenses>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>zuora-nexus-snapshots</id>
+            <name>Zuora Nexus Snapshots</name>
+            <url>http://1.util.inf.slv.zuora:8081/nexus/content/repositories/snapshots/</url>
+        </snapshotRepository>
+        <repository>
+            <id>zuora-nexus-releases</id>
+            <name>Zuora Nexus Releases</name>
+            <url>http://1.util.inf.slv.zuora:8081/nexus/content/repositories/releases/</url>
+        </repository>
+    </distributionManagement>
+
     <scm>
         <connection>scm:git:git://github.com/prestosql/presto.git</connection>
         <url>https://github.com/prestosql/presto</url>
-        <tag>302-ZUORA-1-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -1204,6 +1216,7 @@
                     <artifactId>maven-release-plugin</artifactId>
                     <configuration>
                         <preparationGoals>clean verify -DskipTests</preparationGoals>
+                        <autoVersionSubmodules>true</autoVersionSubmodules>
                     </configuration>
                 </plugin>
             </plugins>
