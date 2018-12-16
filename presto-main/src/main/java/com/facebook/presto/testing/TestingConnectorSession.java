@@ -51,10 +51,13 @@ public class TestingConnectorSession
     private final Map<String, PropertyMetadata<?>> properties;
     private final Map<String, Object> propertyValues;
     private final boolean isLegacyTimestamp;
+    private final Map<String, PropertyMetadata<?>> systemProperties;
+    private final Map<String, Object> systemPropertyValues;
 
     public TestingConnectorSession(List<PropertyMetadata<?>> properties)
     {
-        this("user", Optional.of("test"), Optional.empty(), UTC_KEY, ENGLISH, System.currentTimeMillis(), properties, ImmutableMap.of(), new FeaturesConfig().isLegacyTimestamp());
+        this("user", Optional.of("test"), Optional.empty(), UTC_KEY, ENGLISH, System.currentTimeMillis(), properties,
+             ImmutableMap.of(), ImmutableList.of(), ImmutableMap.of(), new FeaturesConfig().isLegacyTimestamp());
     }
 
     public TestingConnectorSession(
@@ -68,6 +71,22 @@ public class TestingConnectorSession
             Map<String, Object> propertyValues,
             boolean isLegacyTimestamp)
     {
+        this(user, source, traceToken, timeZoneKey, locale, startTime, propertyMetadatas, propertyValues, ImmutableList.of(), ImmutableMap.of(), isLegacyTimestamp);
+    }
+
+    public TestingConnectorSession(
+            String user,
+            Optional<String> source,
+            Optional<String> traceToken,
+            TimeZoneKey timeZoneKey,
+            Locale locale,
+            long startTime,
+            List<PropertyMetadata<?>> propertyMetadatas,
+            Map<String, Object> propertyValues,
+            List<PropertyMetadata<?>> systemPropertyMetadatas,
+            Map<String, Object> systemPropertyValues,
+            boolean isLegacyTimestamp)
+    {
         this.queryId = queryIdGenerator.createNextQueryId().toString();
         this.identity = new Identity(requireNonNull(user, "user is null"), Optional.empty());
         this.source = requireNonNull(source, "source is null");
@@ -78,6 +97,8 @@ public class TestingConnectorSession
         this.properties = Maps.uniqueIndex(propertyMetadatas, PropertyMetadata::getName);
         this.propertyValues = ImmutableMap.copyOf(propertyValues);
         this.isLegacyTimestamp = isLegacyTimestamp;
+        this.systemProperties = Maps.uniqueIndex(systemPropertyMetadatas, PropertyMetadata::getName);
+        this.systemPropertyValues = ImmutableMap.copyOf(systemPropertyValues);
     }
 
     @Override
@@ -136,6 +157,20 @@ public class TestingConnectorSession
             throw new PrestoException(INVALID_SESSION_PROPERTY, "Unknown session property " + name);
         }
         Object value = propertyValues.get(name);
+        if (value == null) {
+            return type.cast(metadata.getDefaultValue());
+        }
+        return type.cast(metadata.decode(value));
+    }
+
+    @Override
+    public <T> T getSystemProperty(String name, Class<T> type)
+    {
+        PropertyMetadata<?> metadata = systemProperties.get(name);
+        if (metadata == null) {
+            throw new PrestoException(INVALID_SESSION_PROPERTY, "Unknown session property " + name);
+        }
+        Object value = systemPropertyValues.get(name);
         if (value == null) {
             return type.cast(metadata.getDefaultValue());
         }
