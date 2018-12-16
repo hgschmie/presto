@@ -37,7 +37,7 @@ pipeline {
 
         stage('Branch-Maven-Deploy') {
             when {
-                branch 'zuora-0\.\\d+'
+                branch 'zuora-0\\.\\d+'
                 expression { isSucceeding() }
             }
             steps {
