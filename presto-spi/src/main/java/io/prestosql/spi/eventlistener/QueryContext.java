@@ -13,6 +13,7 @@
  */
 package io.prestosql.spi.eventlistener;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.prestosql.spi.resourcegroups.ResourceGroupId;
 import io.prestosql.spi.session.ResourceEstimates;
@@ -21,169 +22,62 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static java.util.Objects.requireNonNull;
-
-public class QueryContext
+public interface QueryContext
 {
-    private final String user;
-    private final Optional<String> principal;
-    private final Optional<String> traceToken;
-    private final Optional<String> remoteClientAddress;
-    private final Optional<String> userAgent;
-    private final Optional<String> clientInfo;
-    private final Set<String> clientTags;
-    private final Set<String> clientCapabilities;
-    private final Optional<String> source;
-
-    private final Optional<String> catalog;
-    private final Optional<String> schema;
-
-    private final Optional<ResourceGroupId> resourceGroupId;
-
-    private final Map<String, String> sessionProperties;
-    private final ResourceEstimates resourceEstimates;
-
-    private final String serverAddress;
-    private final String serverVersion;
-    private final String environment;
-
-    public QueryContext(
-            String user,
-            Optional<String> principal,
-            Optional<String> traceToken,
-            Optional<String> remoteClientAddress,
-            Optional<String> userAgent,
-            Optional<String> clientInfo,
-            Set<String> clientTags,
-            Set<String> clientCapabilities,
-            Optional<String> source,
-            Optional<String> catalog,
-            Optional<String> schema,
-            Optional<ResourceGroupId> resourceGroupId,
-            Map<String, String> sessionProperties,
-            ResourceEstimates resourceEstimates,
-            String serverAddress,
-            String serverVersion,
-            String environment)
-    {
-        this.user = requireNonNull(user, "user is null");
-        this.principal = requireNonNull(principal, "principal is null");
-        this.traceToken = requireNonNull(traceToken, "traceToken is null");
-        this.remoteClientAddress = requireNonNull(remoteClientAddress, "remoteClientAddress is null");
-        this.userAgent = requireNonNull(userAgent, "userAgent is null");
-        this.clientInfo = requireNonNull(clientInfo, "clientInfo is null");
-        this.clientTags = requireNonNull(clientTags, "clientTags is null");
-        this.clientCapabilities = requireNonNull(clientCapabilities, "clientCapabilities is null");
-        this.source = requireNonNull(source, "source is null");
-        this.catalog = requireNonNull(catalog, "catalog is null");
-        this.schema = requireNonNull(schema, "schema is null");
-        this.resourceGroupId = requireNonNull(resourceGroupId, "resourceGroupId is null");
-        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
-        this.resourceEstimates = requireNonNull(resourceEstimates, "resourceEstimates is null");
-        this.serverAddress = requireNonNull(serverAddress, "serverAddress is null");
-        this.serverVersion = requireNonNull(serverVersion, "serverVersion is null");
-        this.environment = requireNonNull(environment, "environment is null");
-    }
+    @JsonProperty
+    String getUser();
 
     @JsonProperty
-    public String getUser()
-    {
-        return user;
-    }
+    Optional<String> getPrincipal();
 
     @JsonProperty
-    public Optional<String> getPrincipal()
-    {
-        return principal;
-    }
+    Optional<String> getTraceToken();
 
     @JsonProperty
-    public Optional<String> getTraceToken()
-    {
-        return traceToken;
-    }
+    Optional<String> getRemoteClientAddress();
 
     @JsonProperty
-    public Optional<String> getRemoteClientAddress()
-    {
-        return remoteClientAddress;
-    }
+    Optional<String> getUserAgent();
 
     @JsonProperty
-    public Optional<String> getUserAgent()
-    {
-        return userAgent;
-    }
+    Optional<String> getClientInfo();
 
     @JsonProperty
-    public Optional<String> getClientInfo()
-    {
-        return clientInfo;
-    }
+    Set<String> getClientTags();
 
     @JsonProperty
-    public Set<String> getClientTags()
-    {
-        return clientTags;
-    }
+    Set<String> getClientCapabilities();
 
     @JsonProperty
-    public Set<String> getClientCapabilities()
-    {
-        return clientCapabilities;
-    }
+    Optional<String> getSource();
 
     @JsonProperty
-    public Optional<String> getSource()
-    {
-        return source;
-    }
+    Optional<String> getCatalog();
 
     @JsonProperty
-    public Optional<String> getCatalog()
-    {
-        return catalog;
-    }
+    Optional<String> getSchema();
 
     @JsonProperty
-    public Optional<String> getSchema()
-    {
-        return schema;
-    }
+    Optional<ResourceGroupId> getResourceGroupId();
 
     @JsonProperty
-    public Optional<ResourceGroupId> getResourceGroupId()
-    {
-        return resourceGroupId;
-    }
+    Map<String, String> getSessionProperties();
 
     @JsonProperty
-    public Map<String, String> getSessionProperties()
-    {
-        return sessionProperties;
-    }
+    ResourceEstimates getResourceEstimates();
 
     @JsonProperty
-    public ResourceEstimates getResourceEstimates()
-    {
-        return resourceEstimates;
-    }
+    String getServerAddress();
 
     @JsonProperty
-    public String getServerAddress()
-    {
-        return serverAddress;
-    }
+    String getServerVersion();
 
     @JsonProperty
-    public String getServerVersion()
-    {
-        return serverVersion;
-    }
+    String getEnvironment();
 
-    @JsonProperty
-    public String getEnvironment()
+    @JsonIgnore
+    default <T> T getSystemProperty(String name, Class<T> type)
     {
-        return environment;
+        throw new UnsupportedOperationException();
     }
 }

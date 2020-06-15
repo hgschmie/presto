@@ -52,6 +52,8 @@ public class TestingConnectorSession
     private final Instant start;
     private final Map<String, PropertyMetadata<?>> properties;
     private final Map<String, Object> propertyValues;
+    private final Map<String, PropertyMetadata<?>> systemProperties;
+    private final Map<String, Object> systemPropertyValues;
     private final boolean isLegacyTimestamp;
     private final boolean omitTimestampPrecision;
 
@@ -64,6 +66,8 @@ public class TestingConnectorSession
             Instant start,
             List<PropertyMetadata<?>> propertyMetadatas,
             Map<String, Object> propertyValues,
+            List<PropertyMetadata<?>> systemPropertyMetadatas,
+            Map<String, Object> systemPropertyValues,
             boolean isLegacyTimestamp,
             boolean omitTimestampPrecision)
     {
@@ -75,6 +79,8 @@ public class TestingConnectorSession
         this.start = start;
         this.properties = Maps.uniqueIndex(propertyMetadatas, PropertyMetadata::getName);
         this.propertyValues = ImmutableMap.copyOf(propertyValues);
+        this.systemProperties = Maps.uniqueIndex(systemPropertyMetadatas, PropertyMetadata::getName);
+        this.systemPropertyValues = ImmutableMap.copyOf(systemPropertyValues);
         this.isLegacyTimestamp = isLegacyTimestamp;
         this.omitTimestampPrecision = omitTimestampPrecision;
     }
@@ -148,6 +154,20 @@ public class TestingConnectorSession
     }
 
     @Override
+    public <T> T getSystemProperty(String name, Class<T> type)
+    {
+        PropertyMetadata<?> metadata = systemProperties.get(name);
+        if (metadata == null) {
+            throw new PrestoException(INVALID_SESSION_PROPERTY, "Unknown session property " + name);
+        }
+        Object value = systemPropertyValues.get(name);
+        if (value == null) {
+            return type.cast(metadata.getDefaultValue());
+        }
+        return type.cast(metadata.decode(value));
+    }
+
+    @Override
     public String toString()
     {
         return toStringHelper(this)
@@ -177,6 +197,8 @@ public class TestingConnectorSession
         private Optional<Instant> start = Optional.empty();
         private List<PropertyMetadata<?>> propertyMetadatas = ImmutableList.of();
         private Map<String, Object> propertyValues = ImmutableMap.of();
+        private List<PropertyMetadata<?>> systemProperties = ImmutableList.of();
+        private Map<String, Object> systemPropertyValues = ImmutableMap.of();
         private boolean isLegacyTimestamp = new FeaturesConfig().isLegacyTimestamp();
         private boolean omitTimestampPrecision = new FeaturesConfig().isOmitDateTimeTypePrecision();
 
@@ -212,6 +234,20 @@ public class TestingConnectorSession
             return this;
         }
 
+        public Builder setSystemProperties(List<PropertyMetadata<?>> systemProperties)
+        {
+            requireNonNull(systemProperties, "systemProperties is null");
+            this.systemProperties = systemProperties;
+            return this;
+        }
+
+        public Builder setSystemPropertyValues(Map<String, Object> systemPropertyValues)
+        {
+            requireNonNull(systemPropertyValues, "systemPropertyValues is null");
+            this.systemPropertyValues = ImmutableMap.copyOf(systemPropertyValues);
+            return this;
+        }
+
         public Builder setLegacyTimestamp(boolean legacyTimestamp)
         {
             isLegacyTimestamp = legacyTimestamp;
@@ -235,6 +271,8 @@ public class TestingConnectorSession
                     start.orElse(Instant.now()),
                     propertyMetadatas,
                     propertyValues,
+                    systemProperties,
+                    systemPropertyValues,
                     isLegacyTimestamp,
                     omitTimestampPrecision);
         }

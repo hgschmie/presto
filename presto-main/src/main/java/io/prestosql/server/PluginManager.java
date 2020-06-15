@@ -23,6 +23,7 @@ import io.prestosql.connector.ConnectorManager;
 import io.prestosql.eventlistener.EventListenerManager;
 import io.prestosql.execution.resourcegroups.ResourceGroupManager;
 import io.prestosql.metadata.MetadataManager;
+import io.prestosql.metadata.SessionPropertyManager;
 import io.prestosql.security.AccessControlManager;
 import io.prestosql.security.GroupProviderManager;
 import io.prestosql.server.security.CertificateAuthenticatorManager;
@@ -37,6 +38,7 @@ import io.prestosql.spi.security.CertificateAuthenticatorFactory;
 import io.prestosql.spi.security.GroupProviderFactory;
 import io.prestosql.spi.security.PasswordAuthenticatorFactory;
 import io.prestosql.spi.security.SystemAccessControlFactory;
+import io.prestosql.spi.session.PropertyMetadata;
 import io.prestosql.spi.session.SessionPropertyConfigurationManagerFactory;
 import io.prestosql.spi.type.ParametricType;
 import io.prestosql.spi.type.Type;
@@ -83,6 +85,7 @@ public class PluginManager
     private final EventListenerManager eventListenerManager;
     private final GroupProviderManager groupProviderManager;
     private final SessionPropertyDefaults sessionPropertyDefaults;
+    private final SessionPropertyManager sessionPropertyManager;
     private final ArtifactResolver resolver;
     private final File installedPluginsDir;
     private final List<String> plugins;
@@ -101,7 +104,8 @@ public class PluginManager
             CertificateAuthenticatorManager certificateAuthenticatorManager,
             EventListenerManager eventListenerManager,
             GroupProviderManager groupProviderManager,
-            SessionPropertyDefaults sessionPropertyDefaults)
+            SessionPropertyDefaults sessionPropertyDefaults,
+            SessionPropertyManager sessionPropertyManager)
     {
         requireNonNull(nodeInfo, "nodeInfo is null");
         requireNonNull(config, "config is null");
@@ -124,6 +128,7 @@ public class PluginManager
         this.eventListenerManager = requireNonNull(eventListenerManager, "eventListenerManager is null");
         this.groupProviderManager = requireNonNull(groupProviderManager, "groupProviderManager is null");
         this.sessionPropertyDefaults = requireNonNull(sessionPropertyDefaults, "sessionPropertyDefaults is null");
+        this.sessionPropertyManager = requireNonNull(sessionPropertyManager, "sessionPropertyManager is null");
     }
 
     public void loadPlugins()
@@ -236,6 +241,11 @@ public class PluginManager
         for (GroupProviderFactory groupProviderFactory : plugin.getGroupProviderFactories()) {
             log.info("Registering group provider %s", groupProviderFactory.getName());
             groupProviderManager.addGroupProviderFactory(groupProviderFactory);
+        }
+
+        for (PropertyMetadata<?> propertyMetadata : plugin.getPluginSessionProperties()) {
+            log.info("Registering plugin session property %s", propertyMetadata.getName());
+            sessionPropertyManager.addSystemSessionProperty(propertyMetadata);
         }
     }
 

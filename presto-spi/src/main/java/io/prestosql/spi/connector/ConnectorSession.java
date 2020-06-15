@@ -55,4 +55,9 @@ public interface ConnectorSession
     boolean isOmitDatetimeTypePrecision();
 
     <T> T getProperty(String name, Class<T> type);
+
+    default <T> T getSystemProperty(String name, Class<T> type)
+    {
+        throw new UnsupportedOperationException();
+    }
 }
