@@ -21,10 +21,12 @@ import io.prestosql.spi.security.CertificateAuthenticatorFactory;
 import io.prestosql.spi.security.GroupProviderFactory;
 import io.prestosql.spi.security.PasswordAuthenticatorFactory;
 import io.prestosql.spi.security.SystemAccessControlFactory;
+import io.prestosql.spi.session.PropertyMetadata;
 import io.prestosql.spi.session.SessionPropertyConfigurationManagerFactory;
 import io.prestosql.spi.type.ParametricType;
 import io.prestosql.spi.type.Type;
 
+import java.util.List;
 import java.util.Set;
 
 import static java.util.Collections.emptyList;
@@ -88,6 +90,14 @@ public interface Plugin
     }
 
     default Iterable<SessionPropertyConfigurationManagerFactory> getSessionPropertyConfigurationManagerFactories()
+    {
+        return emptyList();
+    }
+
+    /**
+     * @return the system properties for this plugin
+     */
+    default List<PropertyMetadata<?>> getPluginSessionProperties()
     {
         return emptyList();
     }
