@@ -15,7 +15,7 @@ pipeline {
     }
 
     tools {
-        jdk 'Oracle JDK 8_162'
+        jdk 'jdk11'
     }
 
     stages {
