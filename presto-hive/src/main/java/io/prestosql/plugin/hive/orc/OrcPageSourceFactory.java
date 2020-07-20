@@ -33,13 +33,19 @@ import io.prestosql.plugin.hive.HiveColumnHandle;
 import io.prestosql.plugin.hive.HiveColumnProjectionInfo;
 import io.prestosql.plugin.hive.HivePageSourceFactory;
 import io.prestosql.plugin.hive.ReaderProjections;
+import io.prestosql.plugin.hive.coercions.TypeCoercer;
 import io.prestosql.plugin.hive.orc.OrcPageSource.ColumnAdaptation;
 import io.prestosql.spi.PrestoException;
+import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.BlockBuilder;
 import io.prestosql.spi.connector.ConnectorPageSource;
 import io.prestosql.spi.connector.ConnectorSession;
 import io.prestosql.spi.connector.FixedPageSource;
 import io.prestosql.spi.predicate.Domain;
 import io.prestosql.spi.predicate.TupleDomain;
+import io.prestosql.spi.type.TimeZoneKey;
+import io.prestosql.spi.type.TimestampType;
+import io.prestosql.spi.type.TimestampWithTimeZoneType;
 import io.prestosql.spi.type.Type;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -91,7 +97,10 @@ import static io.prestosql.plugin.hive.ReaderProjections.projectBaseColumns;
 import static io.prestosql.plugin.hive.orc.OrcPageSource.handleException;
 import static io.prestosql.plugin.hive.util.HiveUtil.isDeserializerClass;
 import static io.prestosql.spi.type.BigintType.BIGINT;
+import static io.prestosql.spi.type.DateTimeEncoding.packDateTimeWithZone;
 import static io.prestosql.spi.type.IntegerType.INTEGER;
+import static io.prestosql.spi.type.TimestampType.TIMESTAMP;
+import static io.prestosql.spi.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIME_ZONE;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -160,6 +169,7 @@ public class OrcPageSourceFactory
         ConnectorPageSource orcPageSource = createOrcPageSource(
                 hdfsEnvironment,
                 session.getUser(),
+                session.getTimeZoneKey(),
                 configuration,
                 path,
                 start,
@@ -191,6 +201,7 @@ public class OrcPageSourceFactory
     private static OrcPageSource createOrcPageSource(
             HdfsEnvironment hdfsEnvironment,
             String sessionUser,
+            TimeZoneKey sessionTimeZoneKey,
             Configuration configuration,
             Path path,
             long start,
@@ -313,12 +324,20 @@ public class OrcPageSourceFactory
                     }
                 }
 
-                Type readType = column.getType();
                 if (orcColumn != null) {
                     int sourceIndex = fileReadColumns.size();
-                    columnAdaptations.add(ColumnAdaptation.sourceColumn(sourceIndex));
+                    final ColumnAdaptation columnAdaptation;
+
+                    if (column.getType() == TIMESTAMP_WITH_TIME_ZONE) {
+                        columnAdaptation = ColumnAdaptation.coercingColumn(TIMESTAMP, sourceIndex, new MagicUtcCoercer(sessionTimeZoneKey));
+                    }
+                    else {
+                        columnAdaptation = ColumnAdaptation.sourceColumn(column.getType(), sourceIndex);
+                    }
+
+                    columnAdaptations.add(columnAdaptation);
                     fileReadColumns.add(orcColumn);
-                    fileReadTypes.add(readType);
+                    fileReadTypes.add(columnAdaptation.type());
                     fileReadLayouts.add(projectedLayout);
 
                     // Add predicates on top-level and nested columns
@@ -330,7 +349,7 @@ public class OrcPageSourceFactory
                     }
                 }
                 else {
-                    columnAdaptations.add(ColumnAdaptation.nullColumn(readType));
+                    columnAdaptations.add(ColumnAdaptation.nullColumn(column.getType()));
                 }
             }
 
@@ -437,5 +456,23 @@ public class OrcPageSourceFactory
             current = orcColumn.get();
         }
         return current;
+    }
+
+    private static final class MagicUtcCoercer
+            extends TypeCoercer<TimestampType, TimestampWithTimeZoneType>
+    {
+        private final TimeZoneKey timeZoneKey;
+
+        private MagicUtcCoercer(TimeZoneKey timeZoneKey)
+        {
+            super(TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE);
+            this.timeZoneKey = timeZoneKey;
+        }
+
+        @Override
+        protected void applyCoercedValue(BlockBuilder blockBuilder, Block block, int position)
+        {
+            toType.writeLong(blockBuilder, packDateTimeWithZone(fromType.getLong(block, position), timeZoneKey));
+        }
     }
 }

@@ -31,6 +31,7 @@ import io.prestosql.spi.connector.EmptyPageSource;
 import io.prestosql.spi.connector.RecordCursor;
 import io.prestosql.spi.connector.RecordPageSource;
 import io.prestosql.spi.predicate.TupleDomain;
+import io.prestosql.spi.type.TimeZoneKey;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeManager;
 import org.apache.hadoop.conf.Configuration;
@@ -194,11 +195,14 @@ public class HivePageSourceProvider
                     adapter = Optional.of(new ReaderProjectionsAdapter(desiredColumns, readerProjections.get()));
                 }
 
+                TimeZoneKey sessionTimeZone = session.getTimeZoneKey();
+
                 return Optional.of(new HivePageSource(
                         columnMappings,
                         bucketAdaptation,
                         adapter,
                         hiveStorageTimeZone,
+                        sessionTimeZone,
                         typeManager,
                         pageSource));
             }

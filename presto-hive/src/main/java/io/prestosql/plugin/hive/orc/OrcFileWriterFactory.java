@@ -64,6 +64,7 @@ import static io.prestosql.plugin.hive.HiveSessionProperties.getOrcOptimizedWrit
 import static io.prestosql.plugin.hive.HiveSessionProperties.getOrcOptimizedWriterValidateMode;
 import static io.prestosql.plugin.hive.HiveSessionProperties.getOrcStringStatisticsLimit;
 import static io.prestosql.plugin.hive.HiveSessionProperties.isOrcOptimizedWriterValidate;
+import static io.prestosql.plugin.hive.orc.OrcFileWriter.magicTimestampFilter;
 import static io.prestosql.plugin.hive.util.HiveUtil.getColumnNames;
 import static io.prestosql.plugin.hive.util.HiveUtil.getColumnTypes;
 import static java.util.Locale.ENGLISH;
@@ -184,7 +185,10 @@ public class OrcFileWriterFactory
                     rollbackAction,
                     fileColumnNames,
                     fileColumnTypes,
-                    createRootOrcType(fileColumnNames, fileColumnTypes),
+
+                    // hide all the TIMESTAMP WITH TIME ZONE from the writer, as the orc writer can not deal with those
+                    createRootOrcType(fileColumnNames, magicTimestampFilter(fileColumnTypes)),
+
                     compression,
                     orcWriterOptions
                             .withStripeMinSize(getOrcOptimizedWriterMinStripeSize(session))

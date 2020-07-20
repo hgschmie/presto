@@ -24,11 +24,15 @@ import io.prestosql.orc.metadata.ColumnMetadata;
 import io.prestosql.orc.metadata.CompressionKind;
 import io.prestosql.orc.metadata.OrcType;
 import io.prestosql.plugin.hive.FileWriter;
+import io.prestosql.plugin.hive.coercions.TypeCoercer;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockBuilder;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
+import io.prestosql.spi.type.DateTimeEncoding;
+import io.prestosql.spi.type.TimestampType;
+import io.prestosql.spi.type.TimestampWithTimeZoneType;
 import io.prestosql.spi.type.Type;
 import org.joda.time.DateTimeZone;
 import org.openjdk.jol.info.ClassLayout;
@@ -41,12 +45,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static com.google.common.collect.Lists.transform;
 import static io.prestosql.plugin.hive.HiveErrorCode.HIVE_WRITER_CLOSE_ERROR;
 import static io.prestosql.plugin.hive.HiveErrorCode.HIVE_WRITER_DATA_ERROR;
 import static io.prestosql.plugin.hive.HiveErrorCode.HIVE_WRITE_VALIDATION_FAILED;
+import static io.prestosql.spi.type.TimestampType.TIMESTAMP;
+import static io.prestosql.spi.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIME_ZONE;
 import static java.util.Objects.requireNonNull;
 
 public class OrcFileWriter
@@ -60,6 +68,7 @@ public class OrcFileWriter
     private final int[] fileInputColumnIndexes;
     private final List<Block> nullBlocks;
     private final Optional<Supplier<OrcDataSource>> validationInputFactory;
+    private final List<Function<Block, Block>> coercers;
 
     private long validationCpuNanos;
 
@@ -84,7 +93,7 @@ public class OrcFileWriter
         orcWriter = new OrcWriter(
                 orcDataSink,
                 columnNames,
-                fileColumnTypes,
+                magicTimestampFilter(fileColumnTypes),
                 fileColumnOrcTypes,
                 compression,
                 options,
@@ -99,13 +108,25 @@ public class OrcFileWriter
         this.fileInputColumnIndexes = requireNonNull(fileInputColumnIndexes, "outputColumnInputIndexes is null");
 
         ImmutableList.Builder<Block> nullBlocks = ImmutableList.builder();
+
+        ImmutableList.Builder<Function<Block, Block>> coercersBuilder = ImmutableList.builder();
         for (Type fileColumnType : fileColumnTypes) {
+
+            if (fileColumnType == TIMESTAMP_WITH_TIME_ZONE) {
+                coercersBuilder.add(MagicReverseUtcCoercer.INSTANCE);
+                fileColumnType = TIMESTAMP;
+            }
+            else {
+                coercersBuilder.add(Function.identity());
+            }
+
             BlockBuilder blockBuilder = fileColumnType.createBlockBuilder(null, 1, 0);
             blockBuilder.appendNull();
             nullBlocks.add(blockBuilder.build());
         }
         this.nullBlocks = nullBlocks.build();
         this.validationInputFactory = validationInputFactory;
+        this.coercers = coercersBuilder.build();
     }
 
     @Override
@@ -130,7 +151,7 @@ public class OrcFileWriter
                 blocks[i] = new RunLengthEncodedBlock(nullBlocks.get(i), dataPage.getPositionCount());
             }
             else {
-                blocks[i] = dataPage.getBlock(inputColumnIndex);
+                blocks[i] = coercers.get(i).apply(dataPage.getBlock(inputColumnIndex));
             }
         }
         Page page = new Page(dataPage.getPositionCount(), blocks);
@@ -200,5 +221,33 @@ public class OrcFileWriter
         return toStringHelper(this)
                 .add("writer", orcWriter)
                 .toString();
+    }
+
+    /**
+     * Converts a time stamp with time zone to a timestamp in UTC.
+     */
+    private static final class MagicReverseUtcCoercer
+            extends TypeCoercer<TimestampWithTimeZoneType, TimestampType>
+    {
+        static final MagicReverseUtcCoercer INSTANCE = new MagicReverseUtcCoercer();
+
+        private MagicReverseUtcCoercer()
+        {
+            super(TIMESTAMP_WITH_TIME_ZONE, TIMESTAMP);
+        }
+
+        @Override
+        protected void applyCoercedValue(BlockBuilder blockBuilder, Block block, int position)
+        {
+            toType.writeLong(blockBuilder, DateTimeEncoding.unpackMillisUtc(fromType.getLong(block, position)));
+        }
+    }
+
+    /**
+     * Hides all "timestamp with time zone" types behind "timestamp" as the orc writer can not deal with the former.
+     */
+    public static final List<Type> magicTimestampFilter(List<Type> types)
+    {
+        return transform(types, type -> type == TIMESTAMP_WITH_TIME_ZONE ? TIMESTAMP : type);
     }
 }
