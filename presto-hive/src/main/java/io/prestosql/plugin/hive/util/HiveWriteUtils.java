@@ -39,6 +39,7 @@ import io.prestosql.spi.connector.SchemaTableName;
 import io.prestosql.spi.type.BigintType;
 import io.prestosql.spi.type.BooleanType;
 import io.prestosql.spi.type.CharType;
+import io.prestosql.spi.type.DateTimeEncoding;
 import io.prestosql.spi.type.DateType;
 import io.prestosql.spi.type.DecimalType;
 import io.prestosql.spi.type.Decimals;
@@ -47,6 +48,7 @@ import io.prestosql.spi.type.IntegerType;
 import io.prestosql.spi.type.RealType;
 import io.prestosql.spi.type.SmallintType;
 import io.prestosql.spi.type.TimestampType;
+import io.prestosql.spi.type.TimestampWithTimeZoneType;
 import io.prestosql.spi.type.TinyintType;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.VarbinaryType;
@@ -340,6 +342,12 @@ public final class HiveWriteUtils
             long millisUtc = type.getLong(block, position);
             return new Timestamp(millisUtc);
         }
+
+        if (TimestampWithTimeZoneType.TIMESTAMP_WITH_TIME_ZONE.equals(type)) {
+            long millisUtc = DateTimeEncoding.unpackMillisUtc(type.getLong(block, position));
+            return new Timestamp(millisUtc);
+        }
+
         if (type instanceof DecimalType) {
             DecimalType decimalType = (DecimalType) type;
             return getHiveDecimal(decimalType, block, position);

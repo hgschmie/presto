@@ -46,6 +46,7 @@ import io.prestosql.spi.type.DecimalType;
 import io.prestosql.spi.type.Decimals;
 import io.prestosql.spi.type.MapType;
 import io.prestosql.spi.type.RowType;
+import io.prestosql.spi.type.TimeZoneKey;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeId;
 import io.prestosql.spi.type.TypeManager;
@@ -514,6 +515,7 @@ public final class HiveUtil
                 DOUBLE.equals(type) ||
                 DATE.equals(type) ||
                 TIMESTAMP.equals(type) ||
+                TIMESTAMP_WITH_TIME_ZONE.equals(type) ||
                 isVarcharType(type) ||
                 isCharType(type);
     }
@@ -825,6 +827,18 @@ public final class HiveUtil
         try {
             long millis = parseHiveTimestamp(value, zone);
             return shouldPackWithTimeZone ? DateTimeEncoding.packDateTimeWithZone(millis, zone.getID()) : millis;
+        }
+        catch (IllegalArgumentException e) {
+            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for TIMESTAMP partition key: %s", value, name));
+        }
+    }
+
+    public static long timestampPartitionKeyFromUtc(String value, DateTimeZone storageZone, TimeZoneKey sessionZone, String name)
+    {
+        try {
+            // in Datahub, all timestamps are always stored in UTC. But they should be shown in session time
+            long millis = parseHiveTimestamp(value, storageZone);
+            return DateTimeEncoding.packDateTimeWithZone(millis, sessionZone);
         }
         catch (IllegalArgumentException e) {
             throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for TIMESTAMP partition key: %s", value, name));

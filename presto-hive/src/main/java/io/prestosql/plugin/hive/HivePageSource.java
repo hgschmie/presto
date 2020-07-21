@@ -37,6 +37,7 @@ import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.connector.ConnectorPageSource;
 import io.prestosql.spi.type.DecimalType;
 import io.prestosql.spi.type.MapType;
+import io.prestosql.spi.type.TimeZoneKey;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeManager;
 import io.prestosql.spi.type.VarbinaryType;
@@ -89,6 +90,7 @@ import static io.prestosql.plugin.hive.util.HiveUtil.longDecimalPartitionKey;
 import static io.prestosql.plugin.hive.util.HiveUtil.shortDecimalPartitionKey;
 import static io.prestosql.plugin.hive.util.HiveUtil.smallintPartitionKey;
 import static io.prestosql.plugin.hive.util.HiveUtil.timestampPartitionKey;
+import static io.prestosql.plugin.hive.util.HiveUtil.timestampPartitionKeyFromUtc;
 import static io.prestosql.plugin.hive.util.HiveUtil.tinyintPartitionKey;
 import static io.prestosql.plugin.hive.util.HiveUtil.varcharPartitionKey;
 import static io.prestosql.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -130,6 +132,7 @@ public class HivePageSource
             Optional<BucketAdaptation> bucketAdaptation,
             Optional<ReaderProjectionsAdapter> projectionsAdapter,
             DateTimeZone hiveStorageTimeZone,
+            TimeZoneKey sessionTimeZone,
             TypeManager typeManager,
             ConnectorPageSource delegate)
     {
@@ -210,8 +213,11 @@ public class HivePageSource
                 else if (type.equals(DATE)) {
                     prefilledValue = datePartitionKey(columnValue, name);
                 }
-                else if (type.equals(TIMESTAMP) || type.equals(TIMESTAMP_WITH_TIME_ZONE)) {
-                    prefilledValue = timestampPartitionKey(columnValue, hiveStorageTimeZone, name, type.equals(TIMESTAMP_WITH_TIME_ZONE));
+                else if (type.equals(TIMESTAMP)) {
+                    prefilledValue = timestampPartitionKey(columnValue, hiveStorageTimeZone, name, false);
+                }
+                else if (type.equals(TIMESTAMP_WITH_TIME_ZONE)) {
+                    prefilledValue = timestampPartitionKeyFromUtc(columnValue, hiveStorageTimeZone, sessionTimeZone, name);
                 }
                 else if (isShortDecimal(type)) {
                     prefilledValue = shortDecimalPartitionKey(columnValue, (DecimalType) type, name);

@@ -20,6 +20,7 @@ import io.prestosql.orc.OrcDataSource;
 import io.prestosql.orc.OrcDataSourceId;
 import io.prestosql.orc.OrcRecordReader;
 import io.prestosql.plugin.hive.FileFormatDataSourceStats;
+import io.prestosql.plugin.hive.coercions.TypeCoercer;
 import io.prestosql.plugin.hive.orc.OrcDeletedRows.MaskDeletedRowsFunction;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PrestoException;
@@ -180,14 +181,21 @@ public class OrcPageSource
     {
         Block block(Page sourcePage, MaskDeletedRowsFunction maskDeletedRowsFunction);
 
+        Type type();
+
         static ColumnAdaptation nullColumn(Type type)
         {
             return new NullColumn(type);
         }
 
-        static ColumnAdaptation sourceColumn(int index)
+        static ColumnAdaptation sourceColumn(Type type, int index)
         {
-            return new SourceColumn(index);
+            return new SourceColumn(type, index);
+        }
+
+        static ColumnAdaptation coercingColumn(Type type, int index, TypeCoercer<?, ?> coercer)
+        {
+            return new SourceColumn(type, index, coercer);
         }
     }
 
@@ -203,6 +211,12 @@ public class OrcPageSource
             this.nullBlock = type.createBlockBuilder(null, 1, 0)
                     .appendNull()
                     .build();
+        }
+
+        @Override
+        public Type type()
+        {
+            return type;
         }
 
         @Override
@@ -224,17 +238,35 @@ public class OrcPageSource
             implements ColumnAdaptation
     {
         private final int index;
+        private final Type type;
+        private final TypeCoercer<?, ?> coercer;
 
-        public SourceColumn(int index)
+        public SourceColumn(Type type, int index)
         {
+            this.type = requireNonNull(type, "type is null");
             checkArgument(index >= 0, "index is negative");
             this.index = index;
+            this.coercer = null;
+        }
+
+        public SourceColumn(Type type, int index, TypeCoercer<?, ?> coercer)
+        {
+            this.type = requireNonNull(type, "type is null");
+            checkArgument(index >= 0, "index is negative");
+            this.index = index;
+            this.coercer = requireNonNull(coercer, "coercer is null");
+        }
+
+        @Override
+        public Type type()
+        {
+            return type;
         }
 
         @Override
         public Block block(Page sourcePage, MaskDeletedRowsFunction maskDeletedRowsFunction)
         {
-            Block block = sourcePage.getBlock(index);
+            Block block = coercer == null ? sourcePage.getBlock(index) : coercer.apply(sourcePage.getBlock(index));
             return new LazyBlock(maskDeletedRowsFunction.getPositionCount(), new MaskingBlockLoader(maskDeletedRowsFunction, block));
         }
 
@@ -242,6 +274,7 @@ public class OrcPageSource
         public String toString()
         {
             return toStringHelper(this)
+                    .add("type", type)
                     .add("index", index)
                     .toString();
         }
