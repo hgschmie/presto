@@ -286,7 +286,7 @@ public class IcebergPageSourceProvider
                 Type readType = column.getType();
                 if (orcColumn != null) {
                     int sourceIndex = fileReadColumns.size();
-                    columnAdaptations.add(ColumnAdaptation.sourceColumn(sourceIndex));
+                    columnAdaptations.add(ColumnAdaptation.sourceColumn(readType, sourceIndex));
                     fileReadColumns.add(orcColumn);
                     fileReadTypes.add(readType);
 

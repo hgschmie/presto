@@ -38,6 +38,7 @@ import static io.prestosql.plugin.hive.HiveType.HIVE_LONG;
 import static io.prestosql.plugin.hive.HiveType.HIVE_SHORT;
 import static io.prestosql.plugin.hive.HiveType.HIVE_STRING;
 import static io.prestosql.plugin.hive.HiveType.HIVE_TIMESTAMP;
+import static io.prestosql.plugin.hive.HiveType.HIVE_TIMESTAMP_WITH_LOCAL_TIME_ZONE_UTC;
 import static io.prestosql.plugin.hive.util.HiveUtil.isArrayType;
 import static io.prestosql.plugin.hive.util.HiveUtil.isMapType;
 import static io.prestosql.plugin.hive.util.HiveUtil.isRowType;
@@ -50,6 +51,7 @@ import static io.prestosql.spi.type.IntegerType.INTEGER;
 import static io.prestosql.spi.type.RealType.REAL;
 import static io.prestosql.spi.type.SmallintType.SMALLINT;
 import static io.prestosql.spi.type.TimestampType.TIMESTAMP;
+import static io.prestosql.spi.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIME_ZONE;
 import static io.prestosql.spi.type.TinyintType.TINYINT;
 import static io.prestosql.spi.type.VarbinaryType.VARBINARY;
 import static java.lang.String.format;
@@ -113,6 +115,9 @@ public class HiveTypeTranslator
         }
         if (TIMESTAMP.equals(type)) {
             return HIVE_TIMESTAMP.getTypeInfo();
+        }
+        if (TIMESTAMP_WITH_TIME_ZONE.equals(type)) {
+            return HIVE_TIMESTAMP_WITH_LOCAL_TIME_ZONE_UTC.getTypeInfo();
         }
         if (type instanceof DecimalType) {
             DecimalType decimalType = (DecimalType) type;
