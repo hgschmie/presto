@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.prestosql.plugin.hive.HdfsEnvironment;
 import io.prestosql.plugin.hive.HdfsEnvironment.HdfsContext;
 import io.prestosql.plugin.hive.HiveConfig;
-import io.prestosql.plugin.hive.HiveMetadata;
+import io.prestosql.plugin.hive.HiveLikeMetadata;
 import io.prestosql.plugin.hive.HiveMetastoreClosure;
 import io.prestosql.plugin.hive.PartitionStatistics;
 import io.prestosql.plugin.hive.TransactionalMetadataFactory;
@@ -133,7 +133,7 @@ public class RegisterPartitionProcedure
             throw new PrestoException(INVALID_PROCEDURE_ARGUMENT, "Partition location does not exist: " + partitionLocation);
         }
 
-        SemiTransactionalHiveMetastore metastore = ((HiveMetadata) hiveMetadataFactory.create()).getMetastore();
+        SemiTransactionalHiveMetastore metastore = ((HiveLikeMetadata) hiveMetadataFactory.create()).getMetastore();
 
         metastore.addPartition(
                 session,

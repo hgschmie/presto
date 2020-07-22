@@ -14,7 +14,7 @@
 package io.prestosql.plugin.hive.procedure;
 
 import com.google.common.collect.ImmutableList;
-import io.prestosql.plugin.hive.HiveMetadata;
+import io.prestosql.plugin.hive.HiveLikeMetadata;
 import io.prestosql.plugin.hive.HiveMetastoreClosure;
 import io.prestosql.plugin.hive.TransactionalMetadataFactory;
 import io.prestosql.plugin.hive.authentication.HiveIdentity;
@@ -104,7 +104,7 @@ public class UnregisterPartitionProcedure
         Partition partition = metastore.getPartition(new HiveIdentity(session), schemaName, tableName, partitionValues)
                 .orElseThrow(() -> new PrestoException(NOT_FOUND, format("Partition '%s' does not exist", partitionName)));
 
-        SemiTransactionalHiveMetastore metastore = ((HiveMetadata) hiveMetadataFactory.create()).getMetastore();
+        SemiTransactionalHiveMetastore metastore = ((HiveLikeMetadata) hiveMetadataFactory.create()).getMetastore();
 
         metastore.dropPartition(
                 session,

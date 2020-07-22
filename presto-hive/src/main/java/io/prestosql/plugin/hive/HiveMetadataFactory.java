@@ -13,6 +13,7 @@
  */
 package io.prestosql.plugin.hive;
 
+import com.google.common.base.Functions;
 import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.json.JsonCodec;
 import io.airlift.log.Logger;
@@ -30,6 +31,7 @@ import javax.inject.Inject;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
 
 import static io.prestosql.plugin.hive.metastore.cache.CachingHiveMetastore.memoizeMetastore;
 import static java.util.Objects.requireNonNull;
@@ -61,6 +63,8 @@ public class HiveMetadataFactory
     private final AccessControlMetadataFactory accessControlMetadataFactory;
     private final Optional<Duration> hiveTransactionHeartbeatInterval;
     private final ScheduledExecutorService heartbeatService;
+
+    private Function<HiveLikeMetadata, HiveLikeMetadata> decoratorFunction = Functions.identity();
 
     @Inject
     @SuppressWarnings("deprecation")
@@ -163,6 +167,12 @@ public class HiveMetadataFactory
         this.heartbeatService = requireNonNull(heartbeatService, "heartbeatService is null");
     }
 
+    @com.google.inject.Inject(optional = true)
+    void setDecoratorFunction(Function<HiveLikeMetadata, HiveLikeMetadata> decoratorFunction)
+    {
+        this.decoratorFunction = requireNonNull(decoratorFunction, "decoratorFunction is null");
+    }
+
     @Override
     public TransactionalMetadata create()
     {
@@ -176,7 +186,7 @@ public class HiveMetadataFactory
                 hiveTransactionHeartbeatInterval,
                 heartbeatService);
 
-        return new HiveMetadata(
+        return decoratorFunction.apply(new HiveMetadata(
                 catalogName,
                 metastore,
                 hdfsEnvironment,
@@ -192,6 +202,6 @@ public class HiveMetadataFactory
                 typeTranslator,
                 prestoVersion,
                 new MetastoreHiveStatisticsProvider(metastore),
-                accessControlMetadataFactory.create(metastore));
+                accessControlMetadataFactory.create(metastore)));
     }
 }

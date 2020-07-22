@@ -771,7 +771,7 @@ public abstract class AbstractTestHive
                 (metastore) -> new SqlStandardAccessControlMetadata(metastore));
         transactionManager = new HiveTransactionManager();
         splitManager = new HiveSplitManager(
-                transactionHandle -> ((HiveMetadata) transactionManager.get(transactionHandle)).getMetastore(),
+                transactionHandle -> ((HiveLikeMetadata) transactionManager.get(transactionHandle)).getMetastore(),
                 partitionManager,
                 new NamenodeStats(),
                 hdfsEnvironment,
@@ -848,7 +848,7 @@ public abstract class AbstractTestHive
 
     protected Transaction newTransaction()
     {
-        return new HiveTransaction(transactionManager, (HiveMetadata) metadataFactory.create());
+        return new HiveTransaction(transactionManager, metadataFactory.create());
     }
 
     interface Transaction
@@ -875,7 +875,7 @@ public abstract class AbstractTestHive
         private final ConnectorTransactionHandle transactionHandle;
         private boolean closed;
 
-        public HiveTransaction(HiveTransactionManager transactionManager, HiveMetadata hiveMetadata)
+        public HiveTransaction(HiveTransactionManager transactionManager, TransactionalMetadata hiveMetadata)
         {
             this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
             this.transactionHandle = new HiveTransactionHandle();
@@ -892,7 +892,7 @@ public abstract class AbstractTestHive
         @Override
         public SemiTransactionalHiveMetastore getMetastore()
         {
-            return ((HiveMetadata) transactionManager.get(transactionHandle)).getMetastore();
+            return ((HiveLikeMetadata) transactionManager.get(transactionHandle)).getMetastore();
         }
 
         @Override
@@ -906,7 +906,7 @@ public abstract class AbstractTestHive
         {
             checkState(!closed);
             closed = true;
-            HiveMetadata metadata = (HiveMetadata) transactionManager.remove(transactionHandle);
+            TransactionalMetadata metadata = transactionManager.remove(transactionHandle);
             checkArgument(metadata != null, "no such transaction: %s", transactionHandle);
             metadata.commit();
         }
@@ -916,7 +916,7 @@ public abstract class AbstractTestHive
         {
             checkState(!closed);
             closed = true;
-            HiveMetadata metadata = (HiveMetadata) transactionManager.remove(transactionHandle);
+            TransactionalMetadata metadata = transactionManager.remove(transactionHandle);
             checkArgument(metadata != null, "no such transaction: %s", transactionHandle);
             metadata.rollback();
         }
