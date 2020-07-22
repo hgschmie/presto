@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.prestosql.plugin.hive.HdfsEnvironment;
-import io.prestosql.plugin.hive.HiveMetadata;
+import io.prestosql.plugin.hive.HiveLikeMetadata;
 import io.prestosql.plugin.hive.PartitionStatistics;
 import io.prestosql.plugin.hive.TransactionalMetadataFactory;
 import io.prestosql.plugin.hive.authentication.HiveIdentity;
@@ -114,7 +114,7 @@ public class SyncPartitionMetadataProcedure
         SyncMode syncMode = toSyncMode(mode);
         HdfsContext hdfsContext = new HdfsContext(session, schemaName, tableName);
         HiveIdentity identity = new HiveIdentity(session);
-        SemiTransactionalHiveMetastore metastore = ((HiveMetadata) hiveMetadataFactory.create()).getMetastore();
+        SemiTransactionalHiveMetastore metastore = ((HiveLikeMetadata) hiveMetadataFactory.create()).getMetastore();
         SchemaTableName schemaTableName = new SchemaTableName(schemaName, tableName);
 
         Table table = metastore.getTable(identity, schemaName, tableName)
