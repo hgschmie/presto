@@ -10,7 +10,7 @@
 
     <groupId>io.prestosql</groupId>
     <artifactId>presto-root</artifactId>
-    <version>339-ZUORA-1-SNAPSHOT</version>
+    <version>339-ZUORA-1</version>
     <packaging>pom</packaging>
 
     <name>presto-root</name>
@@ -43,7 +43,8 @@
     <scm>
         <connection>scm:git:git://github.com/prestosql/presto.git</connection>
         <url>https://github.com/prestosql/presto</url>
-    </scm>
+      <tag>339-ZUORA-1</tag>
+  </scm>
 
     <properties>
         <air.main.basedir>${project.basedir}</air.main.basedir>
